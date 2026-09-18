@@ -1,15 +1,17 @@
 package com.fudn.product_service.service;
 
+import java.util.List;
+
+import org.springframework.stereotype.Service;
+
 import com.fudn.product_service.dto.ProductRequest;
 import com.fudn.product_service.dto.ProductResponse;
 import com.fudn.product_service.exception.ProductNotFoundException;
 import com.fudn.product_service.model.Product;
 import com.fudn.product_service.repository.IProductRepository;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -62,10 +64,22 @@ public class ProductService {
     //   - Đừng tạo Product mới — phải update đúng record cũ để không bị tạo id khác
     // ==========================================================
     public ProductResponse updateProduct(String id, ProductRequest productRequest) {
-        // TODO: viết logic update tại đây
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new ProductNotFoundException(id));
 
-        throw new UnsupportedOperationException(
-                "TODO: Sinh vien chua implement updateProduct()");
+        product.setName(productRequest.getName());
+        product.setDescription(productRequest.getDescription());
+        product.setPrice(productRequest.getPrice());
+
+        Product updatedProduct = productRepository.save(product);
+        log.info("Product {} updated..", updatedProduct.getId());
+
+        return new ProductResponse(
+                updatedProduct.getId(),
+                updatedProduct.getName(),
+                updatedProduct.getDescription(),
+                updatedProduct.getPrice()
+        );
     }
 
     // ==========================================================
