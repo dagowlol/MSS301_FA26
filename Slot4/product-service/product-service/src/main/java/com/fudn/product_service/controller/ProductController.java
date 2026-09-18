@@ -3,6 +3,7 @@ package com.fudn.product_service.controller;
 import java.util.List;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -79,6 +80,9 @@ public class ProductController {
     //   @DeleteMapping("/{id}")
     //   @ResponseStatus(HttpStatus.NO_CONTENT)
     //   public void deleteProduct(@PathVariable String id) { ... }
-    // ==========================================================
-    // TODO: viết endpoint delete tại đây
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteProduct(@PathVariable String id) {
+        productService.deleteProduct(id);
+    }
 }
