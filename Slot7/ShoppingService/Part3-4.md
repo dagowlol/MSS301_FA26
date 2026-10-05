@@ -1432,7 +1432,7 @@ Tạo request → tab **Authorization** → **Type: OAuth 2.0** → **Configure 
 Lấy token bằng lệnh (Windows dùng `curl.exe`):
 
 ```bash
-curl -s -X POST "http://localhost:8181/realms/spring-microservices-realm/protocol/openid-connect/token" \
+curl.exe -s -X POST "http://localhost:8181/realms/spring-microservices-realm/protocol/openid-connect/token" \
   -H "Content-Type: application/x-www-form-urlencoded" \
   -d "grant_type=client_credentials" \
   -d "client_id=spring-microservices-client" \

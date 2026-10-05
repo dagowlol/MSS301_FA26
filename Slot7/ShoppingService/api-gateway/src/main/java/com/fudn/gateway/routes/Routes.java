@@ -1,4 +1,4 @@
-package main.java.com.fudn.gateway.routes;
+package com.fudn.gateway.routes;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;

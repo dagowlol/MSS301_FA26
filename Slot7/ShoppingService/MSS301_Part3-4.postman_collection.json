@@ -1,0 +1,934 @@
+{
+	"info": {
+		"_postman_id": "mss301-part3-4-collection",
+		"name": "MSS301 – Part 3-4",
+		"description": "Test collection cho Part 3 (OpenFeign, Gateway routing) và Part 4 (Keycloak, OAuth2 Resource Server).\n\n**Cách dùng:**\n1. Import collection này vào Postman\n2. Chỉnh sửa biến `clientSecret` trong tab Variables (lấy từ Keycloak Admin Console → Clients → spring-microservices-client → Credentials)\n3. Với các request trong folder `Part4 – Gateway (Authenticated)`: Authorization sẽ tự inherit từ Collection (OAuth2 Client Credentials)\n4. Chạy Runner để test toàn bộ",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "gateway",
+			"value": "http://localhost:9000",
+			"type": "string"
+		},
+		{
+			"key": "keycloak",
+			"value": "http://localhost:8181/realms/spring-microservices-realm",
+			"type": "string"
+		},
+		{
+			"key": "clientId",
+			"value": "spring-microservices-client",
+			"type": "string"
+		},
+		{
+			"key": "clientSecret",
+			"value": "THAY_SECRET_CUA_BAN_O_DAY",
+			"type": "string"
+		},
+		{
+			"key": "orderServiceUrl",
+			"value": "http://localhost:8081",
+			"type": "string"
+		},
+		{
+			"key": "inventoryServiceUrl",
+			"value": "http://localhost:8082",
+			"type": "string"
+		},
+		{
+			"key": "productServiceUrl",
+			"value": "http://localhost:8080",
+			"type": "string"
+		}
+	],
+	"auth": {
+		"type": "oauth2",
+		"oauth2": [
+			{ "key": "grant_type", "value": "client_credentials", "type": "string" },
+			{ "key": "accessTokenUrl", "value": "{{keycloak}}/protocol/openid-connect/token", "type": "string" },
+			{ "key": "clientId", "value": "{{clientId}}", "type": "string" },
+			{ "key": "clientSecret", "value": "{{clientSecret}}", "type": "string" },
+			{ "key": "client_authentication", "value": "body", "type": "string" },
+			{ "key": "tokenName", "value": "MSS301 Token", "type": "string" },
+			{ "key": "addTokenTo", "value": "header", "type": "string" }
+		]
+	},
+	"item": [
+		{
+			"name": "T2 – Inventory Direct",
+			"description": "Test trực tiếp Inventory Service (port 8082) – tiền đề cho OpenFeign",
+			"item": [
+				{
+					"name": "T2.1 – Còn hàng (qty=100)",
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{inventoryServiceUrl}}/api/inventory?skuCode=iphone_15&quantity=100",
+							"host": ["{{inventoryServiceUrl}}"],
+							"path": ["api", "inventory"],
+							"query": [
+								{ "key": "skuCode", "value": "iphone_15" },
+								{ "key": "quantity", "value": "100" }
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', () => pm.response.to.have.status(200));",
+									"pm.test('Body = true (còn hàng)', () => {",
+									"    pm.expect(pm.response.text().trim()).to.eql('true');",
+									"});"
+								]
+							}
+						}
+					],
+					"response": []
+				},
+				{
+					"name": "T2.2 – Hết hàng (qty=101)",
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{inventoryServiceUrl}}/api/inventory?skuCode=iphone_15&quantity=101",
+							"host": ["{{inventoryServiceUrl}}"],
+							"path": ["api", "inventory"],
+							"query": [
+								{ "key": "skuCode", "value": "iphone_15" },
+								{ "key": "quantity", "value": "101" }
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', () => pm.response.to.have.status(200));",
+									"pm.test('Body = false (hết hàng)', () => {",
+									"    pm.expect(pm.response.text().trim()).to.eql('false');",
+									"});"
+								]
+							}
+						}
+					],
+					"response": []
+				},
+				{
+					"name": "T2.3 – SKU không tồn tại",
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{inventoryServiceUrl}}/api/inventory?skuCode=khong_ton_tai&quantity=1",
+							"host": ["{{inventoryServiceUrl}}"],
+							"path": ["api", "inventory"],
+							"query": [
+								{ "key": "skuCode", "value": "khong_ton_tai" },
+								{ "key": "quantity", "value": "1" }
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', () => pm.response.to.have.status(200));",
+									"pm.test('Body = false (SKU không tồn tại)', () => {",
+									"    pm.expect(pm.response.text().trim()).to.eql('false');",
+									"});"
+								]
+							}
+						}
+					],
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "T3 – OpenFeign Direct (Order → Inventory)",
+			"description": "Test trực tiếp Order Service (port 8081) – gọi Feign tới Inventory",
+			"item": [
+				{
+					"name": "T3.1 – Đặt hàng thành công (qty=100)",
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"skuCode\": \"iphone_15\",\n    \"price\": 1000,\n    \"quantity\": 100\n}"
+						},
+						"url": {
+							"raw": "{{orderServiceUrl}}/api/order",
+							"host": ["{{orderServiceUrl}}"],
+							"path": ["api", "order"]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 201 Created', () => pm.response.to.have.status(201));",
+									"pm.test('Body = Order Placed Successfully', () => {",
+									"    pm.expect(pm.response.text()).to.include('Order Placed Successfully');",
+									"});"
+								]
+							}
+						}
+					],
+					"response": []
+				},
+				{
+					"name": "T3.2 – Đặt hàng qty=1 (pixel_8)",
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"skuCode\": \"pixel_8\",\n    \"price\": 800,\n    \"quantity\": 1\n}"
+						},
+						"url": {
+							"raw": "{{orderServiceUrl}}/api/order",
+							"host": ["{{orderServiceUrl}}"],
+							"path": ["api", "order"]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 201 Created', () => pm.response.to.have.status(201));",
+									"pm.test('Body = Order Placed Successfully', () => {",
+									"    pm.expect(pm.response.text()).to.include('Order Placed Successfully');",
+									"});"
+								]
+							}
+						}
+					],
+					"response": []
+				},
+				{
+					"name": "T3.3 – Hết hàng (qty=101) → 500",
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"skuCode\": \"iphone_15\",\n    \"price\": 1000,\n    \"quantity\": 101\n}"
+						},
+						"url": {
+							"raw": "{{orderServiceUrl}}/api/order",
+							"host": ["{{orderServiceUrl}}"],
+							"path": ["api", "order"]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 500 (hết hàng)', () => {",
+									"    pm.expect(pm.response.code).to.be.oneOf([500, 409]);",
+									"});"
+								]
+							}
+						}
+					],
+					"response": []
+				},
+				{
+					"name": "T3.4 – SKU không tồn tại → 500",
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"skuCode\": \"nokia_3310\",\n    \"price\": 50,\n    \"quantity\": 1\n}"
+						},
+						"url": {
+							"raw": "{{orderServiceUrl}}/api/order",
+							"host": ["{{orderServiceUrl}}"],
+							"path": ["api", "order"]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 500 (SKU không tồn tại)', () => {",
+									"    pm.expect(pm.response.code).to.be.oneOf([500, 409]);",
+									"});"
+								]
+							}
+						}
+					],
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "T5 – Gateway Routing (No Auth – Part 3)",
+			"description": "Test routing qua API Gateway (port 9000) – trạng thái cuối Part 3 (chưa có oauth2-resource-server). Nếu đã làm Part 4, các request này sẽ trả 401 → chuyển sang folder T8.",
+			"item": [
+				{
+					"name": "T5.1 – GET /api/products qua Gateway",
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gateway}}/api/products",
+							"host": ["{{gateway}}"],
+							"path": ["api", "products"]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', () => pm.response.to.have.status(200));",
+									"pm.test('Có sản phẩm (JSON array)', () => {",
+									"    pm.expect(pm.response.json()).to.be.an('array');",
+									"});"
+								]
+							}
+						}
+					],
+					"response": []
+				},
+				{
+					"name": "T5.2 – POST /api/products qua Gateway",
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"iPhone 15\",\n    \"description\": \"iPhone 15 is a smartphone from Apple\",\n    \"price\": 1000\n}"
+						},
+						"url": {
+							"raw": "{{gateway}}/api/products",
+							"host": ["{{gateway}}"],
+							"path": ["api", "products"]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 201 Created', () => pm.response.to.have.status(201));",
+									"pm.test('Response có id', () => {",
+									"    pm.expect(pm.response.json()).to.have.property('id');",
+									"});"
+								]
+							}
+						}
+					],
+					"response": []
+				},
+				{
+					"name": "T5.3 – POST /api/order qua Gateway",
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"skuCode\": \"iphone_15\",\n    \"price\": 1000,\n    \"quantity\": 1\n}"
+						},
+						"url": {
+							"raw": "{{gateway}}/api/order",
+							"host": ["{{gateway}}"],
+							"path": ["api", "order"]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 201', () => pm.response.to.have.status(201));",
+									"pm.test('Order Placed Successfully', () => {",
+									"    pm.expect(pm.response.text()).to.include('Order Placed Successfully');",
+									"});"
+								]
+							}
+						}
+					],
+					"response": []
+				},
+				{
+					"name": "T5.4 – GET /api/inventory qua Gateway (query params)",
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gateway}}/api/inventory?skuCode=iphone_15&quantity=1",
+							"host": ["{{gateway}}"],
+							"path": ["api", "inventory"],
+							"query": [
+								{ "key": "skuCode", "value": "iphone_15" },
+								{ "key": "quantity", "value": "1" }
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', () => pm.response.to.have.status(200));",
+									"pm.test('Body = true', () => {",
+									"    pm.expect(pm.response.text().trim()).to.eql('true');",
+									"});"
+								]
+							}
+						}
+					],
+					"response": []
+				},
+				{
+					"name": "T5.5 – Path không tồn tại → 404",
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gateway}}/api/khong-co-route",
+							"host": ["{{gateway}}"],
+							"path": ["api", "khong-co-route"]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 404 hoặc 401 (nếu đã bật security)', () => {",
+									"    pm.expect(pm.response.code).to.be.oneOf([404, 401]);",
+									"});"
+								]
+							}
+						}
+					],
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "T6 – Keycloak Token",
+			"description": "Test lấy token từ Keycloak",
+			"item": [
+				{
+					"name": "T6.3 – Discovery Document",
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{keycloak}}/.well-known/openid-configuration",
+							"host": ["{{keycloak}}"],
+							"path": [".well-known", "openid-configuration"]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', () => pm.response.to.have.status(200));",
+									"const json = pm.response.json();",
+									"pm.test('Có issuer đúng realm', () => {",
+									"    pm.expect(json.issuer).to.include('spring-microservices-realm');",
+									"});",
+									"pm.test('Có token_endpoint', () => {",
+									"    pm.expect(json).to.have.property('token_endpoint');",
+									"});",
+									"pm.test('Hỗ trợ client_credentials', () => {",
+									"    pm.expect(json.grant_types_supported).to.include('client_credentials');",
+									"});"
+								]
+							}
+						}
+					],
+					"response": []
+				},
+				{
+					"name": "T6.4 – Lấy token (Client Credentials)",
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/x-www-form-urlencoded" }
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{ "key": "grant_type", "value": "client_credentials" },
+								{ "key": "client_id", "value": "{{clientId}}" },
+								{ "key": "client_secret", "value": "{{clientSecret}}" }
+							]
+						},
+						"url": {
+							"raw": "{{keycloak}}/protocol/openid-connect/token",
+							"host": ["{{keycloak}}"],
+							"path": ["protocol", "openid-connect", "token"]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', () => pm.response.to.have.status(200));",
+									"const json = pm.response.json();",
+									"pm.test('Có access_token', () => {",
+									"    pm.expect(json).to.have.property('access_token');",
+									"});",
+									"pm.test('token_type = Bearer', () => {",
+									"    pm.expect(json.token_type).to.eql('Bearer');",
+									"});",
+									"pm.test('expires_in = 300 (5 phút)', () => {",
+									"    pm.expect(json.expires_in).to.eql(300);",
+									"});",
+									"// Lưu token vào collection variable để dùng lại",
+									"if (json.access_token) {",
+									"    pm.collectionVariables.set('accessToken', json.access_token);",
+									"}"
+								]
+							}
+						}
+					],
+					"response": []
+				},
+				{
+					"name": "T6.6 – Sai secret → 401",
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/x-www-form-urlencoded" }
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{ "key": "grant_type", "value": "client_credentials" },
+								{ "key": "client_id", "value": "{{clientId}}" },
+								{ "key": "client_secret", "value": "sai-secret-hoan-toan" }
+							]
+						},
+						"url": {
+							"raw": "{{keycloak}}/protocol/openid-connect/token",
+							"host": ["{{keycloak}}"],
+							"path": ["protocol", "openid-connect", "token"]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 401 Unauthorized', () => pm.response.to.have.status(401));",
+									"pm.test('Error = unauthorized_client', () => {",
+									"    pm.expect(pm.response.json().error).to.eql('unauthorized_client');",
+									"});"
+								]
+							}
+						}
+					],
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "T7 – Gateway 401 Cases (Negative)",
+			"description": "Test các trường hợp bị chặn bởi OAuth2 Resource Server",
+			"item": [
+				{
+					"name": "T7.1 – Không có Authorization header → 401",
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gateway}}/api/products",
+							"host": ["{{gateway}}"],
+							"path": ["api", "products"]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 401', () => pm.response.to.have.status(401));",
+									"pm.test('Có WWW-Authenticate header', () => {",
+									"    pm.response.to.have.header('WWW-Authenticate');",
+									"});"
+								]
+							}
+						}
+					],
+					"response": []
+				},
+				{
+					"name": "T7.2 – Token rác → 401",
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer abc.def.ghi" }
+						],
+						"url": {
+							"raw": "{{gateway}}/api/products",
+							"host": ["{{gateway}}"],
+							"path": ["api", "products"]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 401', () => pm.response.to.have.status(401));",
+									"pm.test('WWW-Authenticate chứa invalid_token', () => {",
+									"    const wwwAuth = pm.response.headers.get('WWW-Authenticate');",
+									"    pm.expect(wwwAuth).to.include('invalid_token');",
+									"});"
+								]
+							}
+						}
+					],
+					"response": []
+				},
+				{
+					"name": "T7.5 – POST order không token → 401",
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"skuCode\": \"iphone_15\",\n    \"price\": 1000,\n    \"quantity\": 1\n}"
+						},
+						"url": {
+							"raw": "{{gateway}}/api/order",
+							"host": ["{{gateway}}"],
+							"path": ["api", "order"]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 401', () => pm.response.to.have.status(401));",
+									"pm.test('Có WWW-Authenticate header', () => {",
+									"    pm.response.to.have.header('WWW-Authenticate');",
+									"});"
+								]
+							}
+						}
+					],
+					"response": []
+				},
+				{
+					"name": "T7.6 – Health check (public) → 200",
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gateway}}/actuator/health",
+							"host": ["{{gateway}}"],
+							"path": ["actuator", "health"]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', () => pm.response.to.have.status(200));",
+									"pm.test('Status = UP', () => {",
+									"    pm.expect(pm.response.json().status).to.eql('UP');",
+									"});"
+								]
+							}
+						}
+					],
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "T8 – Gateway Authenticated (End-to-End)",
+			"description": "Test end-to-end qua Gateway với Bearer token. Auth inherit từ Collection (OAuth2 Client Credentials).\n\n**Lưu ý:** Trước khi chạy folder này, hãy Get New Access Token ở tab Authorization của Collection.",
+			"item": [
+				{
+					"name": "T8.0 – Lấy token (Pre-request cho folder)",
+					"description": "Tự động lấy token và lưu vào biến `accessToken`. Chạy request này trước các request T8.1–T8.4 nếu dùng Runner.",
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/x-www-form-urlencoded" }
+						],
+						"body": {
+							"mode": "urlencoded",
+							"urlencoded": [
+								{ "key": "grant_type", "value": "client_credentials" },
+								{ "key": "client_id", "value": "{{clientId}}" },
+								{ "key": "client_secret", "value": "{{clientSecret}}" }
+							]
+						},
+						"url": {
+							"raw": "{{keycloak}}/protocol/openid-connect/token",
+							"host": ["{{keycloak}}"],
+							"path": ["protocol", "openid-connect", "token"]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Token lấy thành công', () => {",
+									"    pm.response.to.have.status(200);",
+									"    const json = pm.response.json();",
+									"    pm.expect(json).to.have.property('access_token');",
+									"    pm.collectionVariables.set('accessToken', json.access_token);",
+									"});"
+								]
+							}
+						}
+					],
+					"response": []
+				},
+				{
+					"name": "T8.1 – GET /api/products (có token) → 200",
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{accessToken}}" }
+						],
+						"url": {
+							"raw": "{{gateway}}/api/products",
+							"host": ["{{gateway}}"],
+							"path": ["api", "products"]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', () => pm.response.to.have.status(200));",
+									"pm.test('Có sản phẩm (JSON array)', () => {",
+									"    pm.expect(pm.response.json()).to.be.an('array');",
+									"});"
+								]
+							}
+						}
+					],
+					"response": []
+				},
+				{
+					"name": "T8.2 – GET /api/inventory (có token) → 200",
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "GET",
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{accessToken}}" }
+						],
+						"url": {
+							"raw": "{{gateway}}/api/inventory?skuCode=iphone_15&quantity=1",
+							"host": ["{{gateway}}"],
+							"path": ["api", "inventory"],
+							"query": [
+								{ "key": "skuCode", "value": "iphone_15" },
+								{ "key": "quantity", "value": "1" }
+							]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 200', () => pm.response.to.have.status(200));",
+									"pm.test('Body = true', () => {",
+									"    pm.expect(pm.response.text().trim()).to.eql('true');",
+									"});"
+								]
+							}
+						}
+					],
+					"response": []
+				},
+				{
+					"name": "T8.3 – POST /api/order (có token, qty=1) → 201",
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{accessToken}}" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"skuCode\": \"iphone_15\",\n    \"price\": 1000,\n    \"quantity\": 1\n}"
+						},
+						"url": {
+							"raw": "{{gateway}}/api/order",
+							"host": ["{{gateway}}"],
+							"path": ["api", "order"]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 201 Created', () => pm.response.to.have.status(201));",
+									"pm.test('Order Placed Successfully', () => {",
+									"    pm.expect(pm.response.text()).to.include('Order Placed Successfully');",
+									"});"
+								]
+							}
+						}
+					],
+					"response": []
+				},
+				{
+					"name": "T8.4 – POST /api/order (có token, qty=101) → 500 (hết hàng)",
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{accessToken}}" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"skuCode\": \"iphone_15\",\n    \"price\": 1000,\n    \"quantity\": 101\n}"
+						},
+						"url": {
+							"raw": "{{gateway}}/api/order",
+							"host": ["{{gateway}}"],
+							"path": ["api", "order"]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 500 (lỗi hết hàng, KHÔNG phải 401)', () => {",
+									"    pm.expect(pm.response.code).to.be.oneOf([500, 409]);",
+									"    // Quan trọng: không phải 401 → đã qua được Gateway auth",
+									"});"
+								]
+							}
+						}
+					],
+					"response": []
+				},
+				{
+					"name": "T8.5 – End-to-end: POST order (galaxy_24)",
+					"description": "Luồng tổng hợp: Keycloak → Gateway → Order → Inventory → t_orders",
+					"request": {
+						"auth": { "type": "noauth" },
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{accessToken}}" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"skuCode\": \"galaxy_24\",\n    \"price\": 900,\n    \"quantity\": 5\n}"
+						},
+						"url": {
+							"raw": "{{gateway}}/api/order",
+							"host": ["{{gateway}}"],
+							"path": ["api", "order"]
+						}
+					},
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test('Status 201 – End-to-end thành công', () => pm.response.to.have.status(201));",
+									"pm.test('Order Placed Successfully', () => {",
+									"    pm.expect(pm.response.text()).to.include('Order Placed Successfully');",
+									"});"
+								]
+							}
+						}
+					],
+					"response": []
+				}
+			]
+		}
+	]
+}
