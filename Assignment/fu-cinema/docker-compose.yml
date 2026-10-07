@@ -4,7 +4,7 @@ services:
     image: mcr.microsoft.com/mssql/server:2022-latest
     container_name: cinema-sqlserver
     ports:
-      - "1433:1433"
+      - "1434:1433"
     environment:
       ACCEPT_EULA: "Y"
       MSSQL_SA_PASSWORD: "Fucinema@2026"
@@ -56,7 +56,7 @@ services:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: password
     volumes:
-      - ./docker/mongodb/data:/data/db
+      - mongo-data:/data/db
 
   # ---------- MySQL: booking-service ----------
   mysql:
@@ -72,3 +72,4 @@ services:
 
 volumes:
   sqlserver-data:
+  mongo-data:
