@@ -8,6 +8,6 @@ import java.util.List;
 
 public record CreateBookingRequest(
         @NotEmpty(message = "Booking must have at least 1 ticket")
-        @Size(max = 8, message = "A booking can have at most 8 tickets")      // BR07
+        @Size(max = 6, message = "A booking can have at most 6 tickets")      // BR07
         List<@Valid BookingItemRequest> items) {
 }
