@@ -1,7 +1,6 @@
 package fu.de190484.roomservice.entity;
 
 import java.math.BigDecimal;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -11,22 +10,23 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
-@Entity 
-@Table(name="rooms")
+@Entity
+@Table(name = "rooms")
 public class Room {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "room_id")
-    private Long id;
+    private Long roomId;
 
-    @Column(name = "room_number", nullable = false, unique = true,columnDefinition="NVARCHAR(20)")
+    @Column(name = "room_number", nullable = false, unique = true, length = 20)
     private String roomNumber;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "room_type", nullable = false, columnDefinition="NVARCHAR(10)")
-    private RoomType role;
+    @Column(name = "room_type", nullable = false, length = 10)
+    private RoomType roomType;
 
-    @Column(name = "price_per_night", nullable = false, precision=18, scale=2)
+    @Column(name = "price_per_night", nullable = false, precision = 18, scale = 2)
     private BigDecimal pricePerNight;
 
     @Column(name = "capacity", nullable = false)
@@ -42,22 +42,31 @@ public class Room {
     public Room() {
     }
 
-    public Room(Long id, String roomNumber, RoomType role, BigDecimal pricePerNight, Integer capacity, Integer floor, RoomStatus status) {
-        this.id = id;
+    public Room(Long roomId, String roomNumber, RoomType roomType, BigDecimal pricePerNight, Integer capacity, Integer floor, RoomStatus status) {
+        this.roomId = roomId;
         this.roomNumber = roomNumber;
-        this.role = role;
+        this.roomType = roomType;
         this.pricePerNight = pricePerNight;
         this.capacity = capacity;
         this.floor = floor;
         this.status = status;
     }
 
+    public Long getRoomId() {
+        return roomId;
+    }
+
+    public void setRoomId(Long roomId) {
+        this.roomId = roomId;
+    }
+
+    // Alias for getId/setId if needed
     public Long getId() {
-        return id;
+        return roomId;
     }
 
     public void setId(Long id) {
-        this.id = id;
+        this.roomId = id;
     }
 
     public String getRoomNumber() {
@@ -68,12 +77,12 @@ public class Room {
         this.roomNumber = roomNumber;
     }
 
-    public RoomType getRole() {
-        return role;
+    public RoomType getRoomType() {
+        return roomType;
     }
 
-    public void setRole(RoomType role) {
-        this.role = role;
+    public void setRoomType(RoomType roomType) {
+        this.roomType = roomType;
     }
 
     public BigDecimal getPricePerNight() {
