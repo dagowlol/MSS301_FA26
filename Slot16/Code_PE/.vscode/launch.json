@@ -1,0 +1,34 @@
+{
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Spring Boot-UserserviceApplication<userservice>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "fu.de190484.userservice.UserserviceApplication",
+            "projectName": "userservice",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
+        },
+        {
+            "type": "java",
+            "name": "Spring Boot-PostserviceApplication<postservice>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "fu.de190484.postservice.PostserviceApplication",
+            "projectName": "postservice",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
+        },
+        {
+            "type": "java",
+            "name": "Spring Boot-MediagatewayApplication<mediagateway>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "fu.de190484.mediagateway.MediagatewayApplication",
+            "projectName": "mediagateway",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
+        }
+    ]
+}
