@@ -18,3 +18,7 @@ mysql/
 # ===== OS / logs =====
 .DS_Store
 *.log
+# ===== Editor temporary/lock files =====
+*.LCK*
+.LCK*
+*~
