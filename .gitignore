@@ -7,6 +7,7 @@ out/
 
 # ===== Maven =====
 target/
+**/target/
 !.mvn/wrapper/maven-wrapper.jar
 
 # ===== Docker / MySQL data (runtime files) =====
@@ -14,6 +15,8 @@ docker/mysql/data/
 **/docker/mysql/data/
 mysql/
 **/mysql/
+.vscode/
+**/.vscode/
 
 # ===== OS / logs =====
 .DS_Store
@@ -22,3 +25,4 @@ mysql/
 *.LCK*
 .LCK*
 *~
+~$*
